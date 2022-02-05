@@ -2,7 +2,13 @@
 
 Transparently create an API cache for testing.
 
-### Usage
+### Install
+
+```sh
+$ npm i -D msw msw-snapshot
+```
+
+### Setup
 
 1. Setup [jest](https://jestjs.io)
 
@@ -35,21 +41,6 @@ beforeAll(() => {
 });
 afterAll(() => {
   server.close();
-});
-```
-
-2. Write tests with actual API requests.
-
-```tsx
-import { normalize } form './normalize-api-response';
-
-describe('The tests with API requests', () => {
-
-  it('should normalize API response', async () => {
-      const response = await fetch('your api path').then(res => res.json());
-      expect(normalize(response)).toMatchSnapshot();
-  });
-
 });
 ```
 
