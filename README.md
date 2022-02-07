@@ -24,13 +24,13 @@ module.exports = {
 # jest.setup.js
 
 import path from 'path';
-import { startServer } from 'msw';
+import { setupServer } from 'msw';
 import { snapshot } from 'msw-snapshot';
 
-const server = startServer(
+const server = setupServer(
   // ... your request handlers here ...
 
-  snapshow({
+  snapshot({
     snapshotDir: path.resolve(__dirname, '__msw_snapshots__'),
     updateSnapshot: process.env.UPDATE_MSW_SNAPSHOT === '1',
   })
