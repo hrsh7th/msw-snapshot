@@ -16,11 +16,19 @@ type SnapshotConfig = {
 };
 
 type Snapshot = {
-  status: number;
-  statusText: string;
-  headers: [string, string][];
-  body: string;
-  bodyJSON: string;
+  request: {
+    method: string;
+    url: string;
+    body: PlainObject;
+    headers: [string, string][];
+  };
+  response: {
+    status: number;
+    statusText: string;
+    headers: [string, string][];
+    bodyBase64: string;
+    bodyJSON: string;
+  };
 };
 
 /**
@@ -38,12 +46,19 @@ export const snapshot = (config: SnapshotConfig) => {
     const response = await ctx.fetch(req);
     const body = Buffer.from(await response.arrayBuffer()).toString('base64');
     const snapshot: Snapshot = {
-      status: response.status,
-      statusText: response.statusText,
-      headers: entriesHeaders(response.headers),
-      body: body,
-      bodyJSON: createBodyJSON(body),
-
+      request: {
+        method: req.method,
+        url: req.url.toString(),
+        body: req.body ?? null,
+        headers: entriesHeaders(req.headers)
+      },
+      response: {
+        status: response.status,
+        statusText: response.statusText,
+        bodyBase64: body,
+        bodyJSON: createBodyJSON(body),
+        headers: entriesHeaders(response.headers),
+      }
     };
     config.onFetchFromServer?.(req, snapshot);
     mkdirSync(dirname(snapshotPath), { recursive: true });
@@ -78,10 +93,10 @@ const createSnapshotName = (req: MockedRequest, config: SnapshotConfig) => {
  */
 const makeResponse = (res: ResponseComposition, snapshot: Snapshot) => {
   return res(res => {
-    res.status = snapshot.status;
-    res.statusText = snapshot.statusText;
-    snapshot.headers.forEach(([k, v]) => res.headers.set(k, v))
-    res.body = Buffer.from(snapshot.body, 'base64');
+    res.status = snapshot.response.status;
+    res.statusText = snapshot.response.statusText;
+    snapshot.response.headers.forEach(([k, v]) => res.headers.set(k, v))
+    res.body = Buffer.from(snapshot.response.bodyBase64, 'base64');
     return res;
   });
 };
