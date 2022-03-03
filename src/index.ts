@@ -1,7 +1,9 @@
-import { MockedRequest, ResponseComposition, rest } from "msw";
+import { MockedRequest, ResponseTransformer, rest } from "msw";
 import { join, dirname } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { createHash } from 'crypto';
+
+export { mask } from './cache';
 
 type PlainObject = string | number | null | boolean | PlainObject[] | {
   [k: string]: PlainObject;
@@ -41,7 +43,7 @@ export const snapshot = (config: SnapshotConfig) => {
     if (existsSync(snapshotPath) && !config.updateSnapshot) {
       const snapshot = JSON.parse(readFileSync(snapshotPath).toString('utf8')) as Snapshot;
       config.onFetchFromCache?.(req, snapshot);
-      return makeResponse(res, snapshot);
+      return res(transform(snapshot));
     }
     const response = await ctx.fetch(req);
     const body = Buffer.from(await response.arrayBuffer()).toString('base64');
@@ -63,7 +65,7 @@ export const snapshot = (config: SnapshotConfig) => {
     config.onFetchFromServer?.(req, snapshot);
     mkdirSync(dirname(snapshotPath), { recursive: true });
     writeFileSync(snapshotPath, JSON.stringify(snapshot, undefined, 2));
-    return makeResponse(res, snapshot);
+    return res(transform(snapshot));
   });
 };
 
@@ -84,21 +86,23 @@ const createSnapshotName = (req: MockedRequest, config: SnapshotConfig) => {
     req.url.origin,
     req.url.searchParams.entries(),
     req.headers.raw(),
-    req.body?.toString(),
+    req.body?.toString() ?? '',
   ]), 'binary').digest('hex');
 };
 
 /**
- *  Make response with snapshot.
+ * Transform response.
  */
-const makeResponse = (res: ResponseComposition, snapshot: Snapshot) => {
-  return res(res => {
+const transform = (snapshot: Snapshot): ResponseTransformer => {
+  return res => {
     res.status = snapshot.response.status;
     res.statusText = snapshot.response.statusText;
-    snapshot.response.headers.forEach(([k, v]) => res.headers.set(k, v))
     res.body = Buffer.from(snapshot.response.bodyBase64, 'base64');
+    snapshot.response.headers.forEach(([k, v]) => {
+      res.headers.set(k, v)
+    });
     return res;
-  });
+  };
 };
 
 /**

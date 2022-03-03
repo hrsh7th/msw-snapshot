@@ -1,11 +1,13 @@
 {
   "name": "msw-snapshot",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Transparently create an API cache for testing.",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "typings": "./dist/dts/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "jest",
     "build": "npm run build:cjs && npm run build:esm && npm run build:dts",
@@ -16,7 +18,14 @@
   },
   "author": "hrsh7th",
   "license": "MIT",
-  "keywords": ["msw", "jest", "mock", "api", "snapshot"],
+  "keywords": [
+    "msw",
+    "mswjs",
+    "jest",
+    "mock",
+    "api",
+    "snapshot"
+  ],
   "peerDependencies": {
     "msw": "*"
   },
@@ -24,6 +33,7 @@
     "@types/jest": "^27.4.0",
     "@types/node-fetch": "^2.5.12",
     "jest": "^27.4.7",
+    "msw": "^0.38.2",
     "node-fetch": "2.6",
     "ts-jest": "^27.1.3",
     "typescript": "^4.5.5"
