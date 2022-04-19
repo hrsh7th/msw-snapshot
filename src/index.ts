@@ -42,9 +42,13 @@ export const snapshot = (config: SnapshotConfig) => {
     const snapshotName = createSnapshotName(req, config);
     const snapshotPath = join(config.snapshotDir, req.url.hostname, req.url.pathname, `${snapshotName}.json`);
     if (existsSync(snapshotPath) && !config.updateSnapshot) {
-      const snapshot = JSON.parse(readFileSync(snapshotPath).toString('utf8')) as Snapshot;
-      config.onFetchFromCache?.(req, snapshot);
-      return res(transform(snapshot));
+      try {
+        const snapshot = JSON.parse(readFileSync(snapshotPath).toString('utf8')) as Snapshot;
+        config.onFetchFromCache?.(req, snapshot);
+        return res(transform(snapshot));
+      } catch (e) {
+        console.error(`Can't parse snapshot file: ${snapshotPath}`, e);
+      }
     }
     const response = await ctx.fetch(req);
     const body = Buffer.from(await response.arrayBuffer()).toString('base64');
@@ -126,7 +130,8 @@ const createBodyJSON = (body: string) => {
   try {
     return JSON.parse(Buffer.from(body, 'base64').toString('utf-8'));
   } catch (e) {
-    return undefined;
+    console.error(`Can't create bodyJSON`, e);
+    return null;
   }
 }
 
