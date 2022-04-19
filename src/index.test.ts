@@ -2,7 +2,6 @@ import { setupServer } from 'msw/node';
 import { resolve } from 'path';
 import { rmSync } from 'fs';
 import { snapshot } from '.';
-import fetch from 'node-fetch';
 
 const SNAPSHOT_DIR = resolve(__dirname, '__msw_snapshots__');
 

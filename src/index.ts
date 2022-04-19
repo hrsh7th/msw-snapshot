@@ -29,8 +29,7 @@ type Snapshot = {
     status: number;
     statusText: string;
     headers: [string, string][];
-    bodyBase64: string;
-    bodyJSON: string;
+    bodyText: string;
   };
 };
 
@@ -51,7 +50,7 @@ export const snapshot = (config: SnapshotConfig) => {
       }
     }
     const response = await ctx.fetch(req);
-    const body = Buffer.from(await response.arrayBuffer()).toString('base64');
+    const bodyText = await response.text();
     const snapshot: Snapshot = {
       request: {
         method: req.method,
@@ -63,8 +62,7 @@ export const snapshot = (config: SnapshotConfig) => {
       response: {
         status: response.status,
         statusText: response.statusText,
-        bodyBase64: body,
-        bodyJSON: createBodyJSON(body),
+        bodyText: bodyText,
         headers: entriesHeaders(response.headers),
       }
     };
@@ -104,7 +102,7 @@ const transform = (snapshot: Snapshot): ResponseTransformer => {
   return res => {
     res.status = snapshot.response.status;
     res.statusText = snapshot.response.statusText;
-    res.body = Buffer.from(snapshot.response.bodyBase64, 'base64');
+    res.body = snapshot.response.bodyText
     snapshot.response.headers.forEach(([k, v]) => {
       res.headers.set(k, v)
     });
@@ -122,16 +120,4 @@ const entriesHeaders = (headers: Headers) => {
   });
   return entries;
 };
-
-/**
- * Create human readable body text.
- */
-const createBodyJSON = (body: string) => {
-  try {
-    return JSON.parse(Buffer.from(body, 'base64').toString('utf-8'));
-  } catch (e) {
-    console.error(`Can't create bodyJSON`, e);
-    return null;
-  }
-}
 

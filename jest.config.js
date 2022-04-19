@@ -5,6 +5,8 @@ module.exports = {
     url: 'https://example.com'
   },
 
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+
   testMatch: ['<rootDir>/test/**/*.(js|jsx|ts|tsx)', '<rootDir>/src/**/*.test.(js|jsx|ts|tsx)'],
 
   transform: {
