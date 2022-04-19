@@ -23,6 +23,7 @@ type Snapshot = {
     url: string;
     body: PlainObject;
     headers: [string, string][];
+    cookies: Record<string, string>;
   };
   response: {
     status: number;
@@ -52,7 +53,8 @@ export const snapshot = (config: SnapshotConfig) => {
         method: req.method,
         url: req.url.toString(),
         body: req.body ?? null,
-        headers: entriesHeaders(req.headers)
+        headers: entriesHeaders(req.headers),
+        cookies: req.cookies,
       },
       response: {
         status: response.status,
@@ -86,6 +88,7 @@ const createSnapshotName = (req: MockedRequest, config: SnapshotConfig) => {
     req.url.origin,
     req.url.searchParams.entries(),
     req.headers.raw(),
+    req.cookies,
     req.body?.toString() ?? '',
   ]), 'binary').digest('hex');
 };
