@@ -6,6 +6,26 @@ import { PlainObject } from ".";
 type MaskSpecifier = string | RegExp;
 
 /**
+ * Mask the specified object field.
+ */
+export function maskBody(body: unknown, specifiers: MaskSpecifier[]): unknown {
+  if (body instanceof FormData) {
+    return maskFormData(body, specifiers);
+  } else if (body instanceof URLSearchParams) {
+    return maskURLSearchParams(body, specifiers);
+  } else if (typeof body === 'object' && body) {
+    return maskJSON(body as any, specifiers);
+  } else if (typeof body === 'string') {
+    // Special support for JSON-string.
+    try {
+      return JSON.stringify(maskJSON(JSON.parse(body), specifiers));
+    } catch (e) {
+    }
+  }
+  return body;
+}
+
+/**
  * Mask specified header fields.
  */
 export function maskHeaders(headers: Headers, specifiers: MaskSpecifier[]): Headers {

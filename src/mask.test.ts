@@ -1,6 +1,17 @@
+import { maskBody } from ".";
 import { maskJSON, maskHeaders, maskFormData, maskURLSearchParams } from "./mask";
 
 describe('msw-snapshot', () => {
+
+  it('should mask body fields', () => {
+    expect(maskBody(JSON.stringify({
+      name: 'name',
+      mask: Date.now(),
+      nest: {
+        mask: Date.now(),
+      }
+    }), ['mask'])).toBe(JSON.stringify({ name: 'name', nest: {} }))
+  });
 
   it('should mask the json fields', () => {
     expect(
