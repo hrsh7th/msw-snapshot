@@ -3,9 +3,9 @@ import { join, dirname } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { createHash } from 'crypto';
 
-export { mask } from './cache';
+export * from './mask';
 
-type PlainObject = string | number | null | boolean | PlainObject[] | {
+export type PlainObject = string | number | null | boolean | PlainObject[] | {
   [k: string]: PlainObject;
 }
 
