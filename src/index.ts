@@ -104,7 +104,7 @@ const transform = (snapshot: Snapshot): ResponseTransformer => {
     res.statusText = snapshot.response.statusText;
     res.body = snapshot.response.bodyText
     snapshot.response.headers.forEach(([k, v]) => {
-      res.headers.set(k, v)
+      res.headers.append(k, v)
     });
     return res;
   };
