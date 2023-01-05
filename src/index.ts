@@ -11,7 +11,7 @@ export type PlainObject = string | number | null | boolean | PlainObject[] | {
 }
 
 type SnapshotConfig = {
-  test: RegExp;
+  test?: RegExp;
   snapshotDir: string;
   updateSnapshot?: boolean;
   createSnapshotName?: (req: MockedRequest) => PlainObject;
