@@ -75,4 +75,24 @@ describe('msw-snapshot', () => {
     server.close();
   });
 
+  it('should work with compression response', async () => {
+    const events: string[] = [];
+    const server = setupServer(
+      snapshot({
+        snapshotDir: SNAPSHOT_DIR,
+        onFetchFromServer: () => {
+          events.push('server');
+        },
+        onFetchFromCache: () => {
+          events.push('cache');
+        }
+      })
+    );
+    server.listen();
+    await fetch('https://d.joinhoney.com/v3?operationName=web_getProductPriceHistory&variables=%7B%22productId%22%3A%227613592105936880680_c9cfbae01a9af7d396c1f977224a4b8a_c9cfbae01a9af7d396c1f977224a4b8a%22%2C%22timeframe%22%3A30%7D');
+    await fetch('https://d.joinhoney.com/v3?operationName=web_getProductPriceHistory&variables=%7B%22productId%22%3A%227613592105936880680_c9cfbae01a9af7d396c1f977224a4b8a_c9cfbae01a9af7d396c1f977224a4b8a%22%2C%22timeframe%22%3A30%7D');
+    expect(events).toStrictEqual(['server', 'cache']);
+    server.close();
+  })
+
 });

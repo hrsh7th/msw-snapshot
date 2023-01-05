@@ -1,3 +1,4 @@
+import { TextEncoder, TextDecoder } from 'util';
 import { MockedRequest, ResponseTransformer, rest } from "msw";
 import { join, dirname } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
@@ -29,7 +30,7 @@ type Snapshot = {
     status: number;
     statusText: string;
     headers: [string, string][];
-    bodyText: string;
+    body: string;
   };
 };
 
@@ -50,7 +51,7 @@ export const snapshot = (config: SnapshotConfig) => {
       }
     }
     const response = await ctx.fetch(req);
-    const bodyText = await response.text();
+    const arrayBuffer = await response.arrayBuffer();
     const snapshot: Snapshot = {
       request: {
         method: req.method,
@@ -62,7 +63,7 @@ export const snapshot = (config: SnapshotConfig) => {
       response: {
         status: response.status,
         statusText: response.statusText,
-        bodyText: bodyText,
+        body: new TextDecoder('utf-8').decode(arrayBuffer),
         headers: entriesHeaders(response.headers),
       }
     };
@@ -102,7 +103,7 @@ const transform = (snapshot: Snapshot): ResponseTransformer => {
   return res => {
     res.status = snapshot.response.status;
     res.statusText = snapshot.response.statusText;
-    res.body = snapshot.response.bodyText
+    res.body = new TextEncoder().encode(snapshot.response.body).buffer;
     snapshot.response.headers.forEach(([k, v]) => {
       res.headers.append(k, v)
     });
