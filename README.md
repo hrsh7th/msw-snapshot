@@ -25,7 +25,7 @@ module.exports = {
 
 import path from 'path';
 import { setupServer } from 'msw';
-import { snapshot } from 'msw-snapshot';
+import { snapshot, maskJSON, maskBody, maskURLSearchParams } from 'msw-snapshot';
 
 const server = setupServer(
   // ... your request handlers here ...
@@ -33,6 +33,22 @@ const server = setupServer(
   snapshot({
     snapshotDir: path.resolve(__dirname, '__msw_snapshots__'),
     updateSnapshot: process.env.UPDATE_MSW_SNAPSHOT === '1',
+    createSnapshotName: (req) => {
+      // You can change `request identity` via masking request data.
+      // The following example ignores the following data.
+      // - URLSearchParams: `cachebust` query.
+      // - Cookie: `session`.
+      // - Header: `date`, `cookie`.
+      return [
+        req.method,
+        req.url.origin,
+        req.url.pathname,
+        Array.from(maskURLSearchParams(req.url.searchParams, ['cachebust']).entries()),
+        Array.from(maskHeaders(req.headers, ['cookie', 'date']).entries()),
+        maskJSON(req.cookies, ['session']),
+        req.body
+      ];
+    }
   })
 )
 
