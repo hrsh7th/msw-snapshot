@@ -51,7 +51,7 @@ export const snapshot = (config: SnapshotConfig) => {
       }
     }
     const response = await ctx.fetch(req);
-    const arrayBuffer = await response.arrayBuffer();
+    response.headers.delete('content-encoding');
     const snapshot: Snapshot = {
       request: {
         method: req.method,
@@ -63,7 +63,7 @@ export const snapshot = (config: SnapshotConfig) => {
       response: {
         status: response.status,
         statusText: response.statusText,
-        body: new TextDecoder('utf-8').decode(arrayBuffer),
+        body: new TextDecoder('utf-8').decode(await response.arrayBuffer()),
         headers: entriesHeaders(response.headers),
       }
     };
