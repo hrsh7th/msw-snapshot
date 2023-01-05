@@ -1,9 +1,28 @@
+import { TextDecoder } from 'util';
 import { setupServer } from 'msw/node';
 import { resolve } from 'path';
 import { rmSync } from 'fs';
-import { snapshot } from '.';
+import { maskHeaders, maskJSON, maskURLSearchParams, snapshot } from '.';
+import { MockedRequest } from 'msw';
 
 const SNAPSHOT_DIR = resolve(__dirname, '__msw_snapshots__');
+
+const createSnapshotName = async (req: MockedRequest) => {
+  // You can change `request identity` via masking request data.
+  // The following example ignores the following data.
+  // - URLSearchParams: `cachebust` query.
+  // - Cookie: `session`.
+  // - Header: `date`, `cookie`.
+  return [
+    req.method,
+    req.url.origin,
+    req.url.pathname,
+    Array.from(maskURLSearchParams(req.url.searchParams, ['cachebust']).entries()),
+    Array.from(maskHeaders(req.headers, ['cookie', 'date']).entries()),
+    maskJSON(req.cookies, ['session']),
+    new TextDecoder('utf-8').decode(await req.arrayBuffer()),
+  ];
+};
 
 describe('msw-snapshot', () => {
 
@@ -24,7 +43,8 @@ describe('msw-snapshot', () => {
         },
         onFetchFromCache: () => {
           events.push('cache');
-        }
+        },
+        createSnapshotName: createSnapshotName,
       })
     );
     server.listen();
@@ -44,7 +64,8 @@ describe('msw-snapshot', () => {
         },
         onFetchFromCache: (_, snapshot) => {
           events.push(['cache', snapshot.response.body]);
-        }
+        },
+        createSnapshotName: createSnapshotName,
       })
     );
     server.listen();
@@ -68,7 +89,8 @@ describe('msw-snapshot', () => {
         },
         onFetchFromCache: (_, snapshot) => {
           events.push(['cache', snapshot.response.body]);
-        }
+        },
+        createSnapshotName: createSnapshotName,
       })
     );
     server.listen();
@@ -91,7 +113,8 @@ describe('msw-snapshot', () => {
         },
         onFetchFromCache: (_, snapshot) => {
           events.push(['cache', snapshot.response.body]);
-        }
+        },
+        createSnapshotName: createSnapshotName,
       })
     );
     server.listen();

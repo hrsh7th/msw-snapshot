@@ -24,6 +24,7 @@ module.exports = {
 # jest.setup.js
 
 import path from 'path';
+import { TextDecoder } from 'util';
 import { setupServer } from 'msw';
 import { snapshot, maskJSON, maskBody, maskURLSearchParams } from 'msw-snapshot';
 
