@@ -1,8 +1,10 @@
 module.exports = {
 
-  testURL: 'http://a.example.com:3000',
-  
   testEnvironment: 'jsdom',
+
+  testEnvironmentOptions: {
+    url: 'http://a.example.com:3000'
+  },
 
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 
