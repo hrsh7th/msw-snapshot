@@ -31,6 +31,7 @@ const server = setupServer(
   // ... your request handlers here ...
 
   snapshot({
+    test: /.*/,
     snapshotDir: path.resolve(__dirname, '__msw_snapshots__'),
     updateSnapshot: process.env.UPDATE_MSW_SNAPSHOT === '1',
     createSnapshotName: (req) => {

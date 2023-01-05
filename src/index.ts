@@ -11,6 +11,7 @@ export type PlainObject = string | number | null | boolean | PlainObject[] | {
 }
 
 type SnapshotConfig = {
+  test: RegExp;
   snapshotDir: string;
   updateSnapshot?: boolean;
   createSnapshotName?: (req: MockedRequest) => PlainObject;
@@ -38,7 +39,7 @@ type Snapshot = {
  * Create snapshot RequestHandler.
  */
 export const snapshot = (config: SnapshotConfig) => {
-  return rest.all(/.*/, async (req, res, ctx) => {
+  return rest.all(config.test ?? /.*/, async (req, res, ctx) => {
     const snapshotName = createSnapshotName(req, config);
     const snapshotPath = join(config.snapshotDir, req.url.hostname, req.url.pathname, `${snapshotName}.json`);
     if (existsSync(snapshotPath) && !config.updateSnapshot) {
