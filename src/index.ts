@@ -79,9 +79,13 @@ export const snapshot = (config: SnapshotConfig) => {
  * Create snapshot name from request.
  */
 const createSnapshotName = async (req: MockedRequest, config: SnapshotConfig) => {
-  const clonedReq = new MockedRequest(req.url, req.clone());
+  // TODO: it's fraile for future update...
+  const cloned = new MockedRequest(req.url, {
+    ...req,
+    body: (req as any)._body
+  });
   if (config.createSnapshotName) {
-    const key = await config.createSnapshotName(clonedReq);
+    const key = await config.createSnapshotName(cloned);
     if (typeof key === 'string') {
       return key;
     }
@@ -94,7 +98,7 @@ const createSnapshotName = async (req: MockedRequest, config: SnapshotConfig) =>
     req.url.searchParams.entries(),
     req.headers.raw(),
     req.cookies,
-    new TextDecoder('utf-8').decode(await clonedReq.arrayBuffer()),
+    await cloned.text(),
   ]), 'binary').digest('hex');
 };
 

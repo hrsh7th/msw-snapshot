@@ -1,4 +1,3 @@
-import { TextDecoder } from 'util';
 import { setupServer } from 'msw/node';
 import { resolve } from 'path';
 import { rmSync } from 'fs';
@@ -20,7 +19,7 @@ const createSnapshotName = async (req: MockedRequest) => {
     Array.from(maskURLSearchParams(req.url.searchParams, ['cachebust']).entries()),
     Array.from(maskHeaders(req.headers, ['cookie', 'date']).entries()),
     maskJSON(req.cookies, ['session']),
-    new TextDecoder('utf-8').decode(await req.arrayBuffer()),
+    await req.text(),
   ];
 };
 
@@ -32,6 +31,29 @@ describe('msw-snapshot', () => {
     } catch (e) {
     }
   });
+
+  it('should provide the request object to createSnapshotName', async () => {
+    const server = setupServer(
+      snapshot({
+        snapshotDir: SNAPSHOT_DIR,
+        createSnapshotName: async (req) => {
+          expect(await req.text()).toBe(JSON.stringify({ dummy: 1 }));
+          return '';
+        },
+      })
+    );
+    server.listen();
+    await fetch('https://jsonplaceholder.typicode.com/posts/1', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        dummy: 1
+      })
+    });
+    server.close();
+  })
 
   it('should send request to the server and save snapshot', async () => {
     const events: string[] = [];

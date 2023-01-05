@@ -48,7 +48,7 @@ const server = setupServer(
         Array.from(maskURLSearchParams(req.url.searchParams, ['cachebust']).entries()),
         Array.from(maskHeaders(req.headers, ['cookie', 'date']).entries()),
         maskJSON(req.cookies, ['session']),
-        new TextDecoder('utf-8').decode(await req.arrayBuffer()),
+        await req.text(),
       ];
     }
   })
