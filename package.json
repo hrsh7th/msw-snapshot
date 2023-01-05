@@ -1,6 +1,6 @@
 {
   "name": "msw-snapshot",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Transparently create an API cache for testing.",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
