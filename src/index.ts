@@ -14,7 +14,7 @@ type SnapshotConfig = {
   test?: RegExp;
   snapshotDir: string;
   updateSnapshot?: boolean;
-  createSnapshotName?: (req: MockedRequest) => PlainObject;
+  createSnapshotName?: (req: MockedRequest) => Promise<PlainObject>;
   onFetchFromCache?: (req: MockedRequest, snapshot: Snapshot) => void;
   onFetchFromServer?: (req: MockedRequest, snapshot: Snapshot) => void;
 };
@@ -40,7 +40,7 @@ type Snapshot = {
  */
 export const snapshot = (config: SnapshotConfig) => {
   return rest.all(config.test ?? /.*/, async (req, res, ctx) => {
-    const snapshotName = createSnapshotName(req, config);
+    const snapshotName = await createSnapshotName(req, config);
     const snapshotPath = join(config.snapshotDir, req.url.hostname, req.url.pathname, `${snapshotName}.json`);
     if (existsSync(snapshotPath) && !config.updateSnapshot) {
       try {
@@ -78,9 +78,10 @@ export const snapshot = (config: SnapshotConfig) => {
 /**
  * Create snapshot name from request.
  */
-const createSnapshotName = (req: MockedRequest, config: SnapshotConfig) => {
+const createSnapshotName = async (req: MockedRequest, config: SnapshotConfig) => {
+  const clonedReq = new MockedRequest(req.url, req.clone());
   if (config.createSnapshotName) {
-    const key = config.createSnapshotName(req);
+    const key = await config.createSnapshotName(clonedReq);
     if (typeof key === 'string') {
       return key;
     }
@@ -93,7 +94,7 @@ const createSnapshotName = (req: MockedRequest, config: SnapshotConfig) => {
     req.url.searchParams.entries(),
     req.headers.raw(),
     req.cookies,
-    req.body?.toString() ?? '',
+    new TextDecoder('utf-8').decode(await clonedReq.arrayBuffer()),
   ]), 'binary').digest('hex');
 };
 

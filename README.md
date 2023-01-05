@@ -34,7 +34,7 @@ const server = setupServer(
     test: /.*/,
     snapshotDir: path.resolve(__dirname, '__msw_snapshots__'),
     updateSnapshot: process.env.UPDATE_MSW_SNAPSHOT === '1',
-    createSnapshotName: (req) => {
+    createSnapshotName: async (req) => {
       // You can change `request identity` via masking request data.
       // The following example ignores the following data.
       // - URLSearchParams: `cachebust` query.
@@ -47,7 +47,7 @@ const server = setupServer(
         Array.from(maskURLSearchParams(req.url.searchParams, ['cachebust']).entries()),
         Array.from(maskHeaders(req.headers, ['cookie', 'date']).entries()),
         maskJSON(req.cookies, ['session']),
-        req.body
+        new TextDecoder('utf-8').decode(await req.arrayBuffer()),
       ];
     }
   })
