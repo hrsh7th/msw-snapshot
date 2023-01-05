@@ -56,7 +56,7 @@ export const snapshot = (config: SnapshotConfig) => {
       request: {
         method: req.method,
         url: req.url.toString(),
-        body: req.body ?? null,
+        body: new TextDecoder('utf-8').decode(await req.arrayBuffer()),
         headers: entriesHeaders(req.headers),
         cookies: req.cookies,
       },
