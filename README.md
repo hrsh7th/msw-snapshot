@@ -55,7 +55,7 @@ const server = setupServer(
 )
 
 beforeAll(() => {
-  server.lsiten();
+  server.listen();
 });
 afterAll(() => {
   server.close();
