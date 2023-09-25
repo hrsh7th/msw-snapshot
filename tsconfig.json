@@ -20,5 +20,10 @@
     "sourceMap": true,
     "declaration": true
   },
-  "include": ["src/**/*", "typings/**/*"]
+  "include": ["src/**/*", "typings/**/*"],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }

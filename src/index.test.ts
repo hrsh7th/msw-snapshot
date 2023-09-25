@@ -1,152 +1,205 @@
 import { setupServer } from 'msw/node';
 import { resolve } from 'path';
 import { rmSync } from 'fs';
-import { maskHeaders, maskJSON, maskURLSearchParams, snapshot } from '.';
+import { maskHeaders, maskJSON, maskURLSearchParams, getSortedEntries, snapshot } from '.';
 import { MockedRequest } from 'msw';
+import { createHash } from 'crypto';
 
-const SNAPSHOT_DIR = resolve(__dirname, '__msw_snapshots__');
+const SNAPSHOT_PATH = resolve(__dirname, '__msw_snapshots__');
 
-const createSnapshotName = async (req: MockedRequest) => {
-  // You can change `request identity` via masking request data.
-  // The following example ignores the following data.
-  // - URLSearchParams: `cachebust` query.
-  // - Cookie: `session`.
-  // - Header: `date`, `cookie`.
-  return [
+const createSnapshotFilename = async (req: MockedRequest) => {
+  return createHash('md5').update(JSON.stringify([
     req.method,
     req.url.origin,
     req.url.pathname,
-    Array.from(maskURLSearchParams(req.url.searchParams, ['cachebust']).entries()),
-    Array.from(maskHeaders(req.headers, ['cookie', 'date']).entries()),
+    getSortedEntries(maskURLSearchParams(req.url.searchParams, ['cachebust'])),
+    getSortedEntries(maskHeaders(req.headers, ['cookie', 'date'])),
     maskJSON(req.cookies, ['session']),
     await req.text(),
-  ];
+  ]), 'binary').digest('hex');
 };
 
 describe('msw-snapshot', () => {
 
-  beforeEach(() => {
+  const clearSnapshot = () => {
     try {
-      rmSync(SNAPSHOT_DIR, { recursive: true, force: true });
+      rmSync(SNAPSHOT_PATH, { recursive: true, force: true });
     } catch (e) {
+      console.log(e)
     }
-  });
+  }
+  beforeEach(clearSnapshot);
 
-  it('should provide the request object to createSnapshotName', async () => {
-    const server = setupServer(
-      snapshot({
-        snapshotDir: SNAPSHOT_DIR,
-        createSnapshotName: async (req) => {
-          expect(await req.text()).toBe(JSON.stringify({ dummy: 1 }));
-          return '';
-        },
-      })
-    );
-    server.listen();
-    await fetch('https://jsonplaceholder.typicode.com/posts/1', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        dummy: 1
-      })
-    });
-    server.close();
+  it('should return sorted entries', () => {
+    expect(getSortedEntries(new Headers([
+      ['c', '3'],
+      ['a', '1'],
+      ['b', '2'],
+    ]))).toStrictEqual([
+      ['a', '1'],
+      ['b', '2'],
+      ['c', '3'],
+    ])
+    expect(getSortedEntries(new URLSearchParams([
+      ['c', '3'],
+      ['a', '1'],
+      ['b', '2'],
+    ]))).toStrictEqual([
+      ['a', '1'],
+      ['b', '2'],
+      ['c', '3'],
+    ])
+    expect(getSortedEntries({
+      c: '3',
+      a: '1',
+      b: '2',
+    })).toStrictEqual([
+      ['a', '1'],
+      ['b', '2'],
+      ['c', '3'],
+    ])
   })
 
-  it('should send request to the server and save snapshot', async () => {
-    const events: string[] = [];
-    const server = setupServer(
-      snapshot({
-        snapshotDir: SNAPSHOT_DIR,
-        onFetchFromServer: () => {
-          events.push('server');
-        },
-        onFetchFromCache: () => {
-          events.push('cache');
-        },
-        createSnapshotName: createSnapshotName,
-      })
-    );
-    server.listen();
-    await fetch('https://jsonplaceholder.typicode.com/posts/1');
-    await fetch('https://jsonplaceholder.typicode.com/posts/1');
-    expect(events).toStrictEqual(['server', 'cache']);
-    server.close();
-  });
-
-  it('should use existing cache', async () => {
+  it.each([
+    {
+      name: 'updateSnapshots=false, ignoreSnapshots=false',
+      updateSnapshots: false,
+      ignoreSnapshots: false,
+      expect: [
+        'server',
+        'server',
+      ]
+    }, {
+      name: 'updateSnapshots=true, ignoreSnapshots=false',
+      updateSnapshots: true,
+      ignoreSnapshots: false,
+      expect: [
+        'server',
+        'updated',
+        'cache',
+      ]
+    }, {
+      name: 'updateSnapshots=true, ignoreSnapshots=true',
+      updateSnapshots: true,
+      ignoreSnapshots: true,
+      expect: [
+        'server',
+        'updated',
+        'server',
+        'updated',
+      ]
+    }, {
+      name: 'updateSnapshots=false, ignoreSnapshots=true',
+      updateSnapshots: false,
+      ignoreSnapshots: true,
+      expect: [
+        'server',
+        'server',
+      ]
+    }
+  ])(`should work with $name`, async (spec) => {
     const events: [string, string][] = [];
     const server = setupServer(
       snapshot({
-        snapshotDir: SNAPSHOT_DIR,
+        snapshotPath: SNAPSHOT_PATH,
+        updateSnapshots: spec.updateSnapshots,
+        ignoreSnapshots: spec.ignoreSnapshots,
         onFetchFromServer: (_, snapshot) => {
           events.push(['server', snapshot.response.body]);
         },
-        onFetchFromCache: (_, snapshot) => {
+        onFetchFromSnapshot: (_, snapshot) => {
           events.push(['cache', snapshot.response.body]);
         },
-        createSnapshotName: createSnapshotName,
+        onSnapshotUpdated: (_, snapshot) => {
+          events.push(['updated', snapshot.response.body]);
+        },
+        createSnapshotFilename: createSnapshotFilename,
       })
     );
-    server.listen();
-    const res1 = await (await fetch('https://jsonplaceholder.typicode.com/posts/1')).text();
-    const res2 = await (await fetch('https://jsonplaceholder.typicode.com/posts/1')).text();
-    expect(events).toStrictEqual([
-      ['server', res1],
-      ['cache', res2]
-    ]);
-    server.close();
-  });
+    try {
+      server.listen();
+      const res1 = await (await fetch('http://127.0.0.1:3000/data')).text();
+      const res2 = await (await fetch('http://127.0.0.1:3000/data')).text();
+      expect(res1).toBe(res2)
+      expect(events).toStrictEqual(spec.expect.map((type) => [type, res1]));
+    } finally {
+      server.close();
+    }
+  })
 
-  it('shouldn\'t use existing cache with config.updateSnapshot', async () => {
+  it.each([{
+    name: 'data',
+    uri: 'http://127.0.0.1:3000/data'
+  }, {
+    name: 'query',
+    uri: 'http://127.0.0.1:3000/query?data=1'
+  }, {
+    name: 'form-urlencoded',
+    uri: 'http://127.0.0.1:3000/form-urlencoded',
+    body: (() => {
+      const body = new URLSearchParams()
+      body.append('data', '1')
+      return body
+    })(),
+    // We can't manage multipart/form-data.
+    // }, {
+    //   name: 'form-data',
+    //   uri: 'http://127.0.0.1:3000/form-data',
+    //   body: (() => {
+    //     const body = new FormData()
+    //     body.append('data', '1')
+    //     return body
+    //   })(),
+  }])(`should work with $name`, async (spec) => {
     const events: [string, string][] = [];
     const server = setupServer(
       snapshot({
-        snapshotDir: SNAPSHOT_DIR,
-        updateSnapshot: true,
+        snapshotPath: SNAPSHOT_PATH,
+        updateSnapshots: true,
+        ignoreSnapshots: false,
         onFetchFromServer: (_, snapshot) => {
           events.push(['server', snapshot.response.body]);
         },
-        onFetchFromCache: (_, snapshot) => {
+        onFetchFromSnapshot: (_, snapshot) => {
           events.push(['cache', snapshot.response.body]);
         },
-        createSnapshotName: createSnapshotName,
+        onSnapshotUpdated: (_, snapshot) => {
+          events.push(['updated', snapshot.response.body]);
+        },
+        createSnapshotFilename: createSnapshotFilename,
       })
     );
-    server.listen();
-    const res1 = await (await fetch('https://jsonplaceholder.typicode.com/posts/1')).text();
-    const res2 = await (await fetch('https://jsonplaceholder.typicode.com/posts/1')).text();
-    expect(events).toStrictEqual([
-      ['server', res1],
-      ['server', res2]
-    ]);
-    server.close();
-  });
 
-  it('should work with compression response', async () => {
-    const events: [string, string][] = [];
-    const server = setupServer(
-      snapshot({
-        snapshotDir: SNAPSHOT_DIR,
-        onFetchFromServer: (_, snapshot) => {
-          events.push(['server', snapshot.response.body]);
-        },
-        onFetchFromCache: (_, snapshot) => {
-          events.push(['cache', snapshot.response.body]);
-        },
-        createSnapshotName: createSnapshotName,
-      })
-    );
-    server.listen();
-    const res1 = await (await fetch('https://d.joinhoney.com/v3?operationName=web_getProductPriceHistory&variables=%7B%22productId%22%3A%227613592105936880680_c9cfbae01a9af7d396c1f977224a4b8a_c9cfbae01a9af7d396c1f977224a4b8a%22%2C%22timeframe%22%3A30%7D')).text();
-    const res2 = await (await fetch('https://d.joinhoney.com/v3?operationName=web_getProductPriceHistory&variables=%7B%22productId%22%3A%227613592105936880680_c9cfbae01a9af7d396c1f977224a4b8a_c9cfbae01a9af7d396c1f977224a4b8a%22%2C%22timeframe%22%3A30%7D')).text();
-    expect(events).toStrictEqual([
-      ['server', res1],
-      ['cache', res2]
-    ]);
-    server.close();
+    const getContentType = (body: object | URLSearchParams | FormData) => {
+      if (body instanceof FormData) {
+        return undefined; // undici add content-type automatically
+      } else if (body instanceof URLSearchParams) {
+        return 'application/x-www-form-urlencoded';
+      } else {
+        return 'application/json';
+      }
+    }
+
+    try {
+      server.listen();
+      const request = [spec.uri, {
+        method: spec.body ? 'POST' : 'GET',
+        body: spec.body,
+        headers: spec.body && getContentType(spec.body) ? {
+          'Content-Type': getContentType(spec.body),
+        } : {}
+      }] as Parameters<typeof fetch>;
+      const res1 = await (await fetch(...request)).text();
+      const res2 = await (await fetch(...request)).text();
+      expect(res1).toBe(res2);
+      expect(events).toMatchObject([
+        ['server', res1],
+        ['updated', res1],
+        ['cache', res1]
+      ]);
+    } finally {
+      server.close();
+    }
   })
 
 });
