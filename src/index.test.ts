@@ -1,21 +1,21 @@
 import { setupServer } from 'msw/node';
 import { resolve } from 'path';
 import { rmSync } from 'fs';
-import { maskHeaders, maskJSON, maskURLSearchParams, getSortedEntries, snapshot } from '.';
-import { MockedRequest } from 'msw';
+import { maskHeaders, maskJSON, maskURLSearchParams, getSortedEntries, snapshot, Info } from '.';
 import { createHash } from 'crypto';
 
 const SNAPSHOT_PATH = resolve(__dirname, '__msw_snapshots__');
 
-const createSnapshotFilename = async (req: MockedRequest) => {
+const createSnapshotFilename = async (info: Info) => {
+  const url = new URL(info.request.url);
   return createHash('md5').update(JSON.stringify([
-    req.method,
-    req.url.origin,
-    req.url.pathname,
-    getSortedEntries(maskURLSearchParams(req.url.searchParams, ['cachebust'])),
-    getSortedEntries(maskHeaders(req.headers, ['cookie', 'date'])),
-    maskJSON(req.cookies, ['session']),
-    await req.text(),
+    info.request.method,
+    url.origin,
+    url.pathname,
+    getSortedEntries(maskURLSearchParams(url.searchParams, ['cachebust'])),
+    getSortedEntries(maskHeaders(info.request.headers, ['cookie', 'date'])),
+    maskJSON(info.cookies, ['session']),
+    await info.request.text(),
   ]), 'binary').digest('hex');
 };
 
@@ -196,6 +196,7 @@ describe('msw-snapshot', () => {
       }] as Parameters<typeof fetch>;
       const res1 = await (await fetch(...request)).text();
       const res2 = await (await fetch(...request)).text();
+      expect(res1).toBe(JSON.stringify({ data: "1" }))
       expect(res1).toBe(res2);
       expect(events).toMatchObject([
         ['server', res1],

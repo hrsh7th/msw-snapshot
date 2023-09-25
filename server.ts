@@ -19,7 +19,7 @@ import formbody from '@fastify/formbody'
 
   fastify.get('/data', async (_, res) => {
     res.type('application/json').compress({
-      data: 1
+      data: "1"
     })
   });
 
@@ -44,12 +44,12 @@ import formbody from '@fastify/formbody'
   });
 
   fastify.post<{
-    Params: {
+    Body: {
       data: string
     }
   }>('/form-urlencoded', async (req, res) => {
     res.type('application/json').compress({
-      data: req.params.data
+      data: req.body.data
     })
   });
 
