@@ -171,16 +171,11 @@ function responseSnapshot(snapshot: Snapshot): ResponseTransformer {
 /**
  * Get sorted array of [key, val] tuple from ***#entries.
  */
-export function getSortedEntries(iter: object | URLSearchParams | Headers): [string, string][] {
-  if (iter instanceof Headers) {
-    const entries: [string, string][] = []
-    iter.forEach((v, k) => entries.push([k, v]))
+export function getSortedEntries<T extends Record<string, string> | Map<string, string>>(iter: object | T): [string, string][] {
+  if ('entries' in iter && typeof iter.entries === 'function') {
+    const entries = Array.from(iter.entries())
     entries.sort(([a], [b]) => a.localeCompare(b));
-    return entries;
-  } else if (iter instanceof URLSearchParams) {
-    const keys = Array.from(iter.keys())
-    keys.sort()
-    return keys.map(k => [k, iter.get(k)!]);
+    return entries
   }
   const entries = Object.entries(iter);
   entries.sort(([a], [b]) => a.localeCompare(b));

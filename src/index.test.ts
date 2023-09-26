@@ -118,10 +118,15 @@ describe('msw-snapshot', () => {
     );
     try {
       server.listen();
-      const res1 = await (await fetch('http://127.0.0.1:3000/data')).text();
-      const res2 = await (await fetch('http://127.0.0.1:3000/data')).text();
-      expect(res1).toBe(res2)
-      expect(events).toStrictEqual(spec.expect.map((type) => [type, res1]));
+      const res1 = await fetch('http://127.0.0.1:3000/data');
+      const res1text = await res1.text();
+      const res2 = await fetch('http://127.0.0.1:3000/data');
+      const res2text = await res2.text();
+      expect(res1.headers.get('content-type')).toBe('application/json; charset=utf-8')
+      expect(res2.headers.get('content-type')).toBe('application/json; charset=utf-8')
+      expect(JSON.stringify(res1.headers)).toBe(JSON.stringify(res2.headers))
+      expect(res1text).toBe(res2text)
+      expect(events).toStrictEqual(spec.expect.map((type) => [type, res1text]));
     } finally {
       server.close();
     }
