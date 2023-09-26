@@ -8,14 +8,20 @@ const SNAPSHOT_PATH = resolve(__dirname, '__msw_snapshots__');
 
 const createSnapshotFilename = async (info: Info) => {
   const url = new URL(info.request.url);
+  const body = await (async () => {
+    if (info.request.headers.get('content-type')?.startsWith('multipart/form-data')) {
+      return getSortedEntries(await info.request.formData())
+    }
+    return await info.request.text()
+  })()
   return createHash('md5').update(JSON.stringify([
     info.request.method,
     url.origin,
     url.pathname,
     getSortedEntries(maskURLSearchParams(url.searchParams, ['cachebust'])),
-    getSortedEntries(maskHeaders(info.request.headers, ['cookie', 'date'])),
+    getSortedEntries(maskHeaders(info.request.headers, ['cookie', 'date', 'content-type'])),
     maskJSON(info.cookies, ['session']),
-    await info.request.text(),
+    body,
   ]), 'binary').digest('hex');
 };
 
@@ -134,27 +140,26 @@ describe('msw-snapshot', () => {
 
   it.each([{
     name: 'data',
-    uri: 'http://127.0.0.1:3000/data'
+    uri: 'http://localhost:3000/data'
   }, {
     name: 'query',
-    uri: 'http://127.0.0.1:3000/query?data=1'
+    uri: 'http://localhost:3000/query?data=1'
   }, {
     name: 'form-urlencoded',
-    uri: 'http://127.0.0.1:3000/form-urlencoded',
+    uri: 'http://localhost:3000/form-urlencoded',
     body: (() => {
       const body = new URLSearchParams()
       body.append('data', '1')
       return body
     })(),
-    // We can't manage multipart/form-data.
-    // }, {
-    //   name: 'form-data',
-    //   uri: 'http://127.0.0.1:3000/form-data',
-    //   body: (() => {
-    //     const body = new FormData()
-    //     body.append('data', '1')
-    //     return body
-    //   })(),
+  }, {
+    name: 'form-data',
+    uri: 'http://localhost:3000/form-data',
+    body: (() => {
+      const body = new FormData()
+      body.append('data', '1')
+      return body
+    })(),
   }])(`should work with $name`, async (spec) => {
     const events: [string, string][] = [];
     const server = setupServer(
@@ -177,7 +182,7 @@ describe('msw-snapshot', () => {
 
     const getContentType = (body: object | URLSearchParams | FormData) => {
       if (body instanceof FormData) {
-        return undefined; // undici add content-type automatically
+        return undefined; // undici adds content-type automatically
       } else if (body instanceof URLSearchParams) {
         return 'application/x-www-form-urlencoded';
       } else {
@@ -194,8 +199,8 @@ describe('msw-snapshot', () => {
           'Content-Type': getContentType(spec.body),
         } : {}
       }] as Parameters<typeof fetch>;
-      const res1 = await (await fetch(...request)).text();
-      const res2 = await (await fetch(...request)).text();
+      const res1 = await fetch(...request).then(res => res.text())
+      const res2 = await fetch(...request).then(res => res.text())
       expect(res1).toBe(JSON.stringify({ data: "1" }))
       expect(res1).toBe(res2);
       expect(events).toMatchObject([

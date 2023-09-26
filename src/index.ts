@@ -1,8 +1,8 @@
-import { TextDecoder } from 'util';
+import { TextDecoder } from 'node:util';
 import { bypass, DefaultBodyType, http, StrictRequest } from "msw";
-import { join, dirname } from 'path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { createHash } from 'crypto';
+import { join, dirname } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 export * from './mask';
 
@@ -97,7 +97,7 @@ export const snapshot = (config: SnapshotConfig) => {
       try {
         const snapshot = JSON.parse(readFileSync(snapshotPath).toString('utf8')) as Snapshot;
         config.onFetchFromSnapshot?.(info, snapshot);
-        return new Response(snapshot.response.body, {
+        return new Response(new TextEncoder().encode(snapshot.response.body), {
           headers: new Headers(snapshot.response.headers),
           status: snapshot.response.status,
           statusText: snapshot.response.statusText,
@@ -133,7 +133,7 @@ export const snapshot = (config: SnapshotConfig) => {
       config.onSnapshotUpdated?.(info, snapshot);
     }
 
-    return new Response(snapshot.response.body, {
+    return new Response(new TextEncoder().encode(snapshot.response.body), {
       headers: new Headers(snapshot.response.headers),
       status: snapshot.response.status,
       statusText: snapshot.response.statusText,
@@ -165,11 +165,21 @@ const createSnapshotFilename = async (info: Info, config: SnapshotConfig) => {
 /**
  * Get sorted array of [key, val] tuple from ***#entries.
  */
-export function getSortedEntries<T extends Record<string, string> | Map<string, string>>(iter: object | T): [string, string][] {
-  if ('entries' in iter && typeof iter.entries === 'function') {
-    const entries = Array.from(iter.entries())
+export function getSortedEntries(iter: object | FormData | URLSearchParams | Headers): [string, string][] {
+  if (iter instanceof Headers) {
+    const entries: [string, string][] = []
+    iter.forEach((v, k) => entries.push([k, v]))
     entries.sort(([a], [b]) => a.localeCompare(b));
-    return entries
+    return entries;
+  } else if (iter instanceof FormData) {
+    const entries: [string, string][] = []
+    iter.forEach((v, k) => entries.push([k, v.toString()]))
+    entries.sort(([a], [b]) => a.localeCompare(b));
+    return entries;
+  } else if (iter instanceof URLSearchParams) {
+    const keys = Array.from(iter.keys())
+    keys.sort()
+    return keys.map(k => [k, iter.get(k)!]);
   }
   const entries = Object.entries(iter);
   entries.sort(([a], [b]) => a.localeCompare(b));
