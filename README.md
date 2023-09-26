@@ -100,3 +100,10 @@ snapshot({
 })
 ```
 
+### Does this supports `FormData`?
+
+No. This module does not support `FormData` due to `msw` limitation.
+
+Please wait `msw@next`.
+
+
