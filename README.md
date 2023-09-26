@@ -22,42 +22,42 @@ const server = setupServer(
     /**
      * Specify the directory path to store snapshot files.
      */
-    snapshotPath: string; // required
+    snapshotPath: string;
 
     /**
      * Specify msw's handler RegExp.
      */
-    test: RegExp; // optional, default: /.*/
+    test?: RegExp; // default: /.*/
 
     /**
      * Specify whether to update snapshot or not.
      */
-    updateSnapshots: boolean; // optional, default: false
+    updateSnapshots?: boolean; // default: false
 
     /**
      * Specify whether to ignore existing snapshot or not.
      */
-    ignoreSnapshots: boolean; // optional, default: false
+    ignoreSnapshots?: boolean; // default: false
 
     /**
      * Callback when response is received from server.
      */
-    onFetchFromServer: (req: MockedRequest, snapshot: Snapshot) => void; // optional
+    onFetchFromServer?: (req: MockedRequest, snapshot: Snapshot) => void;
 
     /**
      * Callback when response is received from snapshot.
      */
-    onFetchFromSnapshot: (req: MockedRequest, snapshot: Snapshot) => void; // optional
+    onFetchFromSnapshot?: (req: MockedRequest, snapshot: Snapshot) => void;
 
     /**
      * Callback when snapshot is updated.
      */
-    onSnapshotUpdated: (req: MockedRequest, snapshot: Snapshot) => void; // optional
+    onSnapshotUpdated?: (req: MockedRequest, snapshot: Snapshot) => void;
 
     /**
      * Create request identifier.
      */
-    createSnapshotFilename: (req: MockedRequest) => Promise<string>; // optional
+    createSnapshotFilename?: (req: MockedRequest) => Promise<string>;
   })
 );
 
@@ -80,6 +80,9 @@ In this case, You can control snapshot identity via `createSnapshotFilename`.
 import { snapshot, toHashString, maskURLSearchParams } from 'msw-snapshot';
 
 snapshot({
+
+  ...
+
   createSnapshotFilename: async (req) => {
     return toHashString([
       req.method,
@@ -87,12 +90,13 @@ snapshot({
       req.url.pathname,
       getSortedEntries(maskURLSearchParams(req.url.searchParams, ['t'])), // this
       getSortedEntries(req.headers),
-      req.cookies,
+      getSortedEntries(req.cookies),
       await req.text(),
     ]);
-  }
-})
+  },
 
-// Also, you can use `maskBody`, `maskJSON`, `maskURLSearchParams`, `maskHeaders`, `maskFormData`.
+  ...
+
+})
 ```
 
