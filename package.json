@@ -9,7 +9,9 @@
     "dist"
   ],
   "scripts": {
-    "test": "start-server-and-test 'npm run server' 3000 'jest --runInBand'",
+    "test": "npm run test:jest && npm run test:tsc",
+    "test:jest": "start-server-and-test 'npm run server' 3000 'jest --runInBand'",
+    "test:tsc": "tsc --noEmit",
     "server": "ts-node ./server.ts",
     "build": "npm run build:cjs && npm run build:esm && npm run build:dts",
     "build:dts": "tsc --project ./tsconfig.build.json --outDir ./dist/dts --sourceMap --emitDeclarationOnly",

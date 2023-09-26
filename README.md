@@ -81,7 +81,7 @@ import { snapshot, toHashString, maskURLSearchParams } from 'msw-snapshot';
 
 snapshot({
   createSnapshotFilename: async (req) => {
-    return [
+    return toHashString([
       req.method,
       req.url.origin,
       req.url.pathname,
@@ -89,7 +89,7 @@ snapshot({
       getSortedEntries(req.headers),
       req.cookies,
       await req.text(),
-    ];
+    ]);
   }
 })
 
