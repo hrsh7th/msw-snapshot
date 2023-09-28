@@ -1,0 +1,29 @@
+{
+  "name": "e2e-nextjs-playwright",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "UPDATE_SNAPSHOTS=1 start-server-and-test 'next dev --experimental-test-proxy' 3000 'playwright test --config tests/e2e/playwright.config.ts --ui'",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "swr": "^2.2.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.38.1",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "msw": "^1.3.1",
+    "msw-snapshot": "^2.0.1",
+    "start-server-and-test": "^2.0.1",
+    "typescript": "latest"
+  }
+}

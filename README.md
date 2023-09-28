@@ -3,12 +3,14 @@ msw-snapshot
 
 Transparently create an API cache for testing.
 
+
 Install
 ------------------------------------------------------------
 
 ```sh
 $ npm i -D msw msw-snapshot
 ```
+
 
 Configuration
 ------------------------------------------------------------
@@ -65,6 +67,12 @@ server.listen();
 // The all requests are snapshotted.
 server.close();
 ```
+
+
+Recipe
+------------------------------------------------------------
+
+- [Next.js x playwright](./examples/e2e-nextjs-playwright)
 
 
 FAQ

@@ -20,11 +20,15 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "author": "hrsh7th",
+  "homepage": "https://github.com/hrsh7th/msw-snapshot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hrsh7th/msw-snapshot.git"
+  },
   "license": "MIT",
   "keywords": [
     "msw",
     "mswjs",
-    "jest",
     "mock",
     "api",
     "snapshot"
