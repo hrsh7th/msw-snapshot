@@ -1,10 +1,8 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "target": "es5",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "lib": ["esnext", "dom"],
+    "target": "ES5",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "jsx": "preserve",
     "noEmitHelpers": false,
     "importHelpers": false,
@@ -12,19 +10,22 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "skipLibCheck": true,
-    "newLine": "LF",
+    "declaration": true,
     "sourceMap": true,
-    "declaration": true
+    "noEmit": true
   },
-  "include": ["src/**/*", "typings/**/*"],
-  "ts-node": {
-    "compilerOptions": {
-      "module": "commonjs"
-    }
-  }
+  "include": [
+    "src/**/*",
+    "typings/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

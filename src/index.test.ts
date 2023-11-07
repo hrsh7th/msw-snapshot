@@ -161,6 +161,9 @@ describe('msw-snapshot', () => {
       return body
     })(),
   }])(`should work with $name`, async (spec) => {
+    /**
+     * Start snapshot server and record events.
+     */
     const events: [string, string][] = [];
     const server = setupServer(
       snapshot({
@@ -180,18 +183,10 @@ describe('msw-snapshot', () => {
       })
     );
 
-    const getContentType = (body: object | URLSearchParams | FormData) => {
-      if (body instanceof FormData) {
-        return undefined; // undici adds content-type automatically
-      } else if (body instanceof URLSearchParams) {
-        return 'application/x-www-form-urlencoded';
-      } else {
-        return 'application/json';
-      }
-    }
-
     try {
       server.listen();
+
+      // request twice.
       const request = [spec.uri, {
         method: spec.body ? 'POST' : 'GET',
         body: spec.body,
@@ -201,8 +196,12 @@ describe('msw-snapshot', () => {
       }] as Parameters<typeof fetch>;
       const res1 = await fetch(...request).then(res => res.text())
       const res2 = await fetch(...request).then(res => res.text())
+
+      // check response.
       expect(res1).toBe(JSON.stringify({ data: "1" }))
       expect(res1).toBe(res2);
+
+      // check events.
       expect(events).toMatchObject([
         ['server', res1],
         ['updated', res1],
@@ -214,3 +213,16 @@ describe('msw-snapshot', () => {
   })
 
 });
+
+/**
+ * Create contentType from POST body.
+ */
+const getContentType = (body: object | URLSearchParams | FormData) => {
+  if (body instanceof FormData) {
+    return undefined; // undici adds content-type automatically
+  } else if (body instanceof URLSearchParams) {
+    return 'application/x-www-form-urlencoded';
+  } else {
+    return 'application/json';
+  }
+}

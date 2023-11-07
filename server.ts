@@ -1,14 +1,12 @@
 import Fastify from 'fastify'
 import compress from '@fastify/compress'
-import multipart from '@fastify/multipart'
+import multipart, { MultipartValue } from '@fastify/multipart'
 import formbody from '@fastify/formbody'
 
 (async () => {
-
   const fastify = Fastify()
-
   await fastify.register(compress, { global: false })
-  await fastify.register(multipart, { addToBody: true, attachFieldsToBody: true })
+  await fastify.register(multipart, { attachFieldsToBody: true })
   await fastify.register(formbody, {})
 
   fastify.get('/', async (_, res) => {
@@ -35,11 +33,11 @@ import formbody from '@fastify/formbody'
 
   fastify.post<{
     Body: {
-      data: string
+      data: MultipartValue<string>
     }
   }>('/form-data', async (req, res) => {
     res.type('application/json').compress({
-      data: req.body.data
+      data: req.body.data.value
     })
   });
 
