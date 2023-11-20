@@ -17,9 +17,9 @@
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "declaration": true,
-    "sourceMap": true,
-    "noEmit": true
+    "sourceMap": true
   },
   "include": [
     "src/**/*",
