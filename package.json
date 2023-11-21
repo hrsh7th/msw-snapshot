@@ -1,15 +1,15 @@
 {
   "name": "msw-snapshot",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Transparently create an API cache for testing.",
   "type": "module",
   "main": "./dist/esm/index.js",
   "typings": "./dist/dts/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/dts/index.d.ts"
+      "import": "./dist/esm/*",
+      "require": "./dist/cjs/*",
+      "types": "./dist/dts/*"
     }
   },
   "files": [
@@ -22,8 +22,8 @@
     "server": "tsx ./server.ts",
     "build": "npm run build:cjs && npm run build:esm && npm run build:dts",
     "build:dts": "tsc --project ./tsconfig.build.json --outDir ./dist/dts --sourceMap --emitDeclarationOnly",
-    "build:cjs": "tsc --project ./tsconfig.build.json --outDir ./dist/cjs --sourceMap --module commonjs",
-    "build:esm": "tsc --project ./tsconfig.build.json --outDir ./dist/esm --sourceMap --module esnext",
+    "build:cjs": "tsc --project ./tsconfig.build.json --outDir ./dist/cjs --sourceMap --module commonjs --moduleResolution node",
+    "build:esm": "tsc --project ./tsconfig.build.json --outDir ./dist/esm --sourceMap --module nodenext",
     "prepublishOnly": "npm run build && npm run test"
   },
   "author": "hrsh7th",

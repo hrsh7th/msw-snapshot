@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { maskBody } from ".";
-import { maskJSON, maskHeaders, maskFormData, maskURLSearchParams } from "./mask";
+import { maskBody } from "./index.js";
+import { maskJSON, maskHeaders, maskFormData, maskURLSearchParams } from "./mask.js";
 
 describe('msw-snapshot', () => {
 

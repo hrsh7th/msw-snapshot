@@ -1,4 +1,4 @@
-import { PlainObject } from ".";
+import { PlainObject } from "./index.js";
 
 /**
  * The specifier to mask the field.
@@ -8,17 +8,17 @@ type MaskSpecifier = string | RegExp;
 /**
  * Mask the specified object field.
  */
-export function maskBody(body: unknown, specifiers: MaskSpecifier[]): unknown {
+export function maskBody<T extends FormData | URLSearchParams | PlainObject>(body: T, specifiers: MaskSpecifier[]): T {
   if (body instanceof FormData) {
-    return maskFormData(body, specifiers);
+    return maskFormData(body, specifiers) as T;
   } else if (body instanceof URLSearchParams) {
-    return maskURLSearchParams(body, specifiers);
+    return maskURLSearchParams(body, specifiers) as T;
   } else if (typeof body === 'object' && body) {
-    return maskJSON(body as any, specifiers);
+    return maskJSON(body as any, specifiers) as T;
   } else if (typeof body === 'string') {
     // Special support for JSON-string.
     try {
-      return JSON.stringify(maskJSON(JSON.parse(body), specifiers));
+      return JSON.stringify(maskJSON(JSON.parse(body), specifiers)) as T;
     } catch (e) {
     }
   }

@@ -1,10 +1,10 @@
 import { TextDecoder } from 'node:util';
-import { bypass, DefaultBodyType, http, StrictRequest } from "msw";
+import { bypass, DefaultBodyType, http, HttpHandler, StrictRequest } from "msw";
 import { join, dirname } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
-export * from './mask';
+export * from './mask.js';
 
 export type PlainObject = string | number | null | boolean | PlainObject[] | {
   [k: string]: PlainObject;
@@ -86,7 +86,7 @@ export type Snapshot = {
 /**
  * Create snapshot RequestHandler.
  */
-export const snapshot = (config: SnapshotConfig) => {
+export const snapshot = (config: SnapshotConfig): HttpHandler => {
   return http.all(config.test ?? /.*/, async (info) => {
     const url = new URL(info.request.url);
     const snapshotName = await createSnapshotFilename(info, config);

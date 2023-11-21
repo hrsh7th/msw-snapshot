@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES5",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "jsx": "preserve",
     "noEmitHelpers": false,
     "importHelpers": false,

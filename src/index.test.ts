@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { setupServer } from 'msw/node';
 import { resolve } from 'path';
 import { rmSync } from 'fs';
-import { maskHeaders, maskJSON, maskURLSearchParams, getSortedEntries, snapshot, Info } from '.';
+import { maskHeaders, maskJSON, maskURLSearchParams, getSortedEntries, snapshot, Info } from './index.js';
 import { createHash } from 'crypto';
 
 const SNAPSHOT_PATH = resolve(__dirname, '__msw_snapshots__');
