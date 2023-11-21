@@ -1,15 +1,20 @@
 {
   "name": "msw-snapshot",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Transparently create an API cache for testing.",
   "type": "module",
   "main": "./dist/esm/index.js",
   "typings": "./dist/dts/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/*",
-      "require": "./dist/cjs/*",
-      "types": "./dist/dts/*"
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/dts/index.d.ts"
+    },
+    "./mask": {
+      "import": "./dist/esm/mask.js",
+      "require": "./dist/cjs/mask.js",
+      "types": "./dist/dts/mask.d.ts"
     }
   },
   "files": [
