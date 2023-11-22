@@ -73,7 +73,7 @@ export type Snapshot = {
     url: string;
     body: PlainObject;
     headers: [string, string][];
-    cookies: Record<string, string | string[]>;
+    cookies: [string, string][];
   };
   response: {
     status: number;
@@ -115,7 +115,7 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
         url: info.request.url,
         body: new TextDecoder('utf-8').decode(await info.request.arrayBuffer()),
         headers: getSortedEntries(info.request.headers),
-        cookies: info.cookies,
+        cookies: getSortedEntries(info.cookies),
       },
       response: {
         status: response.status,
@@ -165,7 +165,7 @@ const createSnapshotFilename = async (info: Info, config: SnapshotConfig) => {
 /**
  * Get sorted array of [key, val] tuple from ***#entries.
  */
-export function getSortedEntries(iter: object | FormData | URLSearchParams | Headers): [string, string][] {
+export function getSortedEntries(iter: Record<string, string | string[]> | FormData | URLSearchParams | Headers): [string, string][] {
   if (iter instanceof Headers) {
     const entries: [string, string][] = []
     iter.forEach((v, k) => entries.push([k, v]))
@@ -183,7 +183,7 @@ export function getSortedEntries(iter: object | FormData | URLSearchParams | Hea
   }
   const entries = Object.entries(iter);
   entries.sort(([a], [b]) => a.localeCompare(b));
-  return entries;
+  return entries.map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v]);
 };
 
 /**

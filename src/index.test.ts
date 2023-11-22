@@ -146,6 +146,12 @@ describe('msw-snapshot', () => {
     name: 'query',
     uri: 'http://localhost:3000/query?data=1'
   }, {
+    name: 'cookie',
+    uri: 'http://localhost:3000/cookie',
+    headers: {
+      Cookie: 'data=1'
+    },
+  }, {
     name: 'form-urlencoded',
     uri: 'http://localhost:3000/form-urlencoded',
     body: (() => {
@@ -191,9 +197,13 @@ describe('msw-snapshot', () => {
       const request = [spec.uri, {
         method: spec.body ? 'POST' : 'GET',
         body: spec.body,
-        headers: spec.body && getContentType(spec.body) ? {
-          'Content-Type': getContentType(spec.body),
-        } : {}
+        headers: {
+          'Host': 'localhost:3000',
+          ...(
+            spec.body && getContentType(spec.body) ? { 'Content-Type': getContentType(spec.body) } : {}
+          ),
+          ...(spec.headers ?? {})
+        }
       }] as Parameters<typeof fetch>;
       const res1 = await fetch(...request).then(res => res.text())
       const res2 = await fetch(...request).then(res => res.text())

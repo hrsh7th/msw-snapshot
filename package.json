@@ -1,6 +1,6 @@
 {
   "name": "msw-snapshot",
-  "version": "3.4.0",
+  "version": "4.0.0",
   "description": "Transparently create an API cache for testing.",
   "type": "module",
   "main": "./dist/esm/index.js",
@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@fastify/compress": "^6.5.0",
+    "@fastify/cookie": "^9.2.0",
     "@fastify/formbody": "^7.4.0",
     "@fastify/multipart": "^8.0.0",
     "@types/node": "^20.9.2",

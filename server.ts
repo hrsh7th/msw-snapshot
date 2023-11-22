@@ -2,12 +2,14 @@ import Fastify from 'fastify'
 import compress from '@fastify/compress'
 import multipart, { MultipartValue } from '@fastify/multipart'
 import formbody from '@fastify/formbody'
+import cookie from '@fastify/cookie';
 
 (async () => {
   const fastify = Fastify()
   await fastify.register(compress, { global: false })
   await fastify.register(multipart, { attachFieldsToBody: true })
   await fastify.register(formbody, {})
+  await fastify.register(cookie)
 
   fastify.get('/', async (_, res) => {
     res.type('application/json').compress({
@@ -30,6 +32,12 @@ import formbody from '@fastify/formbody'
       data: req.query.data
     })
   });
+
+  fastify.get('/cookie', async (req, res) => {
+    res.type('application/json').compress({
+      data: req.cookies.data
+    })
+  })
 
   fastify.post<{
     Body: {
