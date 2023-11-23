@@ -33,6 +33,8 @@ export function maskHeaders(headers: Headers, specifiers: MaskSpecifier[]): Head
   headers.forEach((val, key) => {
     if (!specifiers.some(specifier => matchField(specifier, key))) {
       maskedHeaders.append(key, val);
+    } else {
+      maskedHeaders.append(key, '*****');
     }
   });
   return maskedHeaders;
@@ -46,6 +48,8 @@ export function maskURLSearchParams(searchParams: URLSearchParams, specifiers: M
   searchParams.forEach((value, key) => {
     if (!specifiers.some(specifier => matchField(specifier, key))) {
       maskedSearchParams.append(key, value);
+    } else {
+      maskedSearchParams.append(key, '*****')
     }
   });
   return maskedSearchParams;
@@ -63,6 +67,8 @@ export function maskJSON(json: PlainObject, specifiers: MaskSpecifier[]): PlainO
   for (const [key, val] of Object.entries(json)) {
     if (!specifiers.some(specifier => matchField(specifier, key))) {
       maskedJSON[key] = maskJSON(val, specifiers);
+    } else {
+      maskedJSON[key] = '*****';
     }
   }
   return maskedJSON;
@@ -76,6 +82,8 @@ export function maskFormData(formData: FormData, specifiers: MaskSpecifier[]): F
   formData.forEach((value, key) => {
     if (!specifiers.some(specifier => matchField(specifier, key))) {
       maskedFormData.append(key, value);
+    } else {
+      maskedFormData.append(key, '*****');
     }
   });
   return maskedFormData;

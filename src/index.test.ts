@@ -2,12 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { setupServer } from 'msw/node';
 import { resolve } from 'path';
 import { rmSync } from 'fs';
-import { maskHeaders, maskJSON, maskURLSearchParams, getSortedEntries, snapshot, Info } from './index.js';
-import { createHash } from 'crypto';
+import { maskHeaders, maskJSON, maskURLSearchParams, getSortedEntries, snapshot, context, Info, DEFAULT_NAMESPACE, toHashString } from './index.js';
 
 const SNAPSHOT_PATH = resolve(__dirname, '__msw_snapshots__');
 
-const createSnapshotFilename = async (info: Info) => {
+const createSnapshotPath = async (info: Info) => {
   const url = new URL(info.request.url);
   const body = await (async () => {
     if (info.request.headers.get('content-type')?.startsWith('multipart/form-data')) {
@@ -15,7 +14,7 @@ const createSnapshotFilename = async (info: Info) => {
     }
     return await info.request.text()
   })()
-  return createHash('md5').update(JSON.stringify([
+  return context.namespace + '/' + toHashString([
     info.request.method,
     url.origin,
     url.pathname,
@@ -23,7 +22,7 @@ const createSnapshotFilename = async (info: Info) => {
     getSortedEntries(maskHeaders(info.request.headers, ['cookie', 'date', 'content-type'])),
     maskJSON(info.cookies, ['session']),
     body,
-  ]), 'binary').digest('hex');
+  ]);
 };
 
 describe('msw-snapshot', () => {
@@ -35,7 +34,10 @@ describe('msw-snapshot', () => {
       console.log(e)
     }
   }
-  beforeEach(clearSnapshot);
+  beforeEach(() => {
+    context.namespace = DEFAULT_NAMESPACE;
+    clearSnapshot();
+  });
 
   it('should return sorted entries', () => {
     expect(getSortedEntries(new Headers([
@@ -65,6 +67,43 @@ describe('msw-snapshot', () => {
       ['b', '2'],
       ['c', '3'],
     ])
+  })
+
+  it.only('should add namespace to snapshot filename', async () => {
+    const events: [string, string][] = [];
+    const server = setupServer(
+      snapshot({
+        basePath: SNAPSHOT_PATH,
+        updateSnapshots: true,
+        ignoreSnapshots: false,
+        onFetchFromServer: (_, snapshot) => {
+          events.push(['server', snapshot.response.body]);
+        },
+        onFetchFromSnapshot: (_, snapshot) => {
+          events.push(['cache', snapshot.response.body]);
+        },
+        onSnapshotUpdated: (_, snapshot) => {
+          events.push(['updated', snapshot.response.body]);
+        },
+        createSnapshotPath: createSnapshotPath,
+      })
+    );
+    try {
+      server.listen();
+      const res1 = await fetch('http://127.0.0.1:3000/data');
+      const res1text = await res1.text();
+      context.namespace = 'next';
+      const res2 = await fetch('http://127.0.0.1:3000/data');
+      const res2text = await res2.text();
+      expect(events).toMatchObject([
+        ['server', res1text],
+        ['updated', res1text],
+        ['server', res2text],
+        ['updated', res2text],
+      ]);
+    } finally {
+      server.close();
+    }
   })
 
   it.each([
@@ -108,7 +147,7 @@ describe('msw-snapshot', () => {
     const events: [string, string][] = [];
     const server = setupServer(
       snapshot({
-        snapshotPath: SNAPSHOT_PATH,
+        basePath: SNAPSHOT_PATH,
         updateSnapshots: spec.updateSnapshots,
         ignoreSnapshots: spec.ignoreSnapshots,
         onFetchFromServer: (_, snapshot) => {
@@ -120,7 +159,7 @@ describe('msw-snapshot', () => {
         onSnapshotUpdated: (_, snapshot) => {
           events.push(['updated', snapshot.response.body]);
         },
-        createSnapshotFilename: createSnapshotFilename,
+        createSnapshotPath: createSnapshotPath,
       })
     );
     try {
@@ -174,7 +213,7 @@ describe('msw-snapshot', () => {
     const events: [string, string][] = [];
     const server = setupServer(
       snapshot({
-        snapshotPath: SNAPSHOT_PATH,
+        basePath: SNAPSHOT_PATH,
         updateSnapshots: true,
         ignoreSnapshots: false,
         onFetchFromServer: (_, snapshot) => {
@@ -186,7 +225,7 @@ describe('msw-snapshot', () => {
         onSnapshotUpdated: (_, snapshot) => {
           events.push(['updated', snapshot.response.body]);
         },
-        createSnapshotFilename: createSnapshotFilename,
+        createSnapshotPath: createSnapshotPath,
       })
     );
 

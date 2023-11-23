@@ -1,8 +1,10 @@
 import { TextDecoder } from 'node:util';
-import { bypass, DefaultBodyType, http, HttpHandler, StrictRequest } from "msw";
-import { join, dirname } from 'node:path';
+import { DefaultBodyType, http, HttpHandler, StrictRequest } from "msw";
+import { dirname } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+
+const pureFetch = globalThis.fetch;
 
 export * from './mask.js';
 
@@ -13,6 +15,7 @@ export type PlainObject = string | number | null | boolean | PlainObject[] | {
 export type Info = {
   request: StrictRequest<DefaultBodyType>;
   cookies: Record<string, string | string[]>;
+  context: typeof context;
 }
 
 export type SnapshotConfig = {
@@ -24,7 +27,7 @@ export type SnapshotConfig = {
   /**
    * Specify snapshot directory path.
    */
-  snapshotPath: string;
+  basePath: string;
 
   /**
    * Specify whether to update snapshots.
@@ -49,7 +52,7 @@ export type SnapshotConfig = {
   /**
    * Create snapshot filename from request.
    */
-  createSnapshotFilename?: (info: Info) => Promise<string>;
+  createSnapshotPath?: (info: Info) => Promise<string>;
 
   /**
    * Callback when response is received from server.
@@ -84,19 +87,37 @@ export type Snapshot = {
 };
 
 /**
+ * Default namespace.
+ */
+export const DEFAULT_NAMESPACE = 'default';
+
+/**
+ * Context of snapshotting.
+ * You can use it for separating snapshot files with modifying context.namespace.
+ */
+export const context = {
+  namespace: DEFAULT_NAMESPACE,
+};
+
+/**
  * Create snapshot RequestHandler.
  */
 export const snapshot = (config: SnapshotConfig): HttpHandler => {
-  return http.all(config.test ?? /.*/, async (info) => {
-    const url = new URL(info.request.url);
-    const snapshotName = await createSnapshotFilename(info, config);
-    const snapshotPath = join(config.snapshotPath, url.hostname, url.pathname, `${snapshotName}.json`);
+  return http.all(config.test ?? /.*/, async (mswInfo) => {
+    const clonedInfo = () => {
+      return {
+        request: mswInfo.request.clone(),
+        cookies: { ...mswInfo.cookies },
+        context: context,
+      };
+    }
+    const snapshotPath = config.basePath + '/' + await createSnapshotPath(clonedInfo(), config);
 
     // Fetch from snapshot
     if (!config.ignoreSnapshots && existsSync(snapshotPath)) {
       try {
         const snapshot = JSON.parse(readFileSync(snapshotPath).toString('utf8')) as Snapshot;
-        config.onFetchFromSnapshot?.(info, snapshot);
+        config.onFetchFromSnapshot?.(clonedInfo(), snapshot);
         return new Response(new TextEncoder().encode(snapshot.response.body), {
           headers: new Headers(snapshot.response.headers),
           status: snapshot.response.status,
@@ -108,14 +129,14 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
     }
 
     // Fetch from server
-    const response = await fetch(bypass(info.request));
+    const response = await pureFetch(mswInfo.request.clone());
     const snapshot: Snapshot = {
       request: {
-        method: info.request.method,
-        url: info.request.url,
-        body: new TextDecoder('utf-8').decode(await info.request.arrayBuffer()),
-        headers: getSortedEntries(info.request.headers),
-        cookies: getSortedEntries(info.cookies),
+        method: mswInfo.request.method,
+        url: mswInfo.request.url,
+        body: new TextDecoder('utf-8').decode(await mswInfo.request.clone().arrayBuffer()),
+        headers: getSortedEntries(mswInfo.request.headers),
+        cookies: getSortedEntries(mswInfo.cookies),
       },
       response: {
         status: response.status,
@@ -124,13 +145,13 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
         headers: getSortedEntries(response.headers),
       }
     };
-    config.onFetchFromServer?.(info, snapshot);
+    config.onFetchFromServer?.(clonedInfo(), snapshot);
 
     // Update snapshot if needed
     if (config.updateSnapshots) {
       mkdirSync(dirname(snapshotPath), { recursive: true });
       writeFileSync(snapshotPath, JSON.stringify(snapshot, undefined, 2));
-      config.onSnapshotUpdated?.(info, snapshot);
+      config.onSnapshotUpdated?.(clonedInfo(), snapshot);
     }
 
     return new Response(new TextEncoder().encode(snapshot.response.body), {
@@ -142,48 +163,28 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
 };
 
 /**
- * Create snapshot name from request.
+ * Get sorted array of [key, val] tuple from ***#entries.
  */
-const createSnapshotFilename = async (info: Info, config: SnapshotConfig) => {
-  const cloned = info.request.clone();
-  if (config.createSnapshotFilename) {
-    return await config.createSnapshotFilename({ ...info, request: cloned });
+export function getEntries(iter: Record<string, string | string[]> | FormData | URLSearchParams | Headers): [string, string][] {
+  if (iter instanceof Headers) {
+    const entries: [string, string][] = []
+    iter.forEach((v, k) => entries.push([k, v]))
+    return entries;
+  } else if (iter instanceof FormData) {
+    const entries: [string, string][] = []
+    iter.forEach((v, k) => entries.push([k, v.toString()]))
+    return entries;
+  } else if (iter instanceof URLSearchParams) {
+    return Array.from(iter.entries());
   }
-
-  const url = new URL(cloned.url);
-  return toHashString([
-    cloned.method,
-    url.origin,
-    url.pathname,
-    getSortedEntries(url.searchParams),
-    getSortedEntries(cloned.headers),
-    getSortedEntries(info.cookies),
-    await cloned.text(),
-  ]);
-};
+  return Object.entries(iter).map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v]);
+}
 
 /**
  * Get sorted array of [key, val] tuple from ***#entries.
  */
 export function getSortedEntries(iter: Record<string, string | string[]> | FormData | URLSearchParams | Headers): [string, string][] {
-  if (iter instanceof Headers) {
-    const entries: [string, string][] = []
-    iter.forEach((v, k) => entries.push([k, v]))
-    entries.sort(([a], [b]) => a.localeCompare(b));
-    return entries;
-  } else if (iter instanceof FormData) {
-    const entries: [string, string][] = []
-    iter.forEach((v, k) => entries.push([k, v.toString()]))
-    entries.sort(([a], [b]) => a.localeCompare(b));
-    return entries;
-  } else if (iter instanceof URLSearchParams) {
-    const keys = Array.from(iter.keys())
-    keys.sort()
-    return keys.map(k => [k, iter.get(k)!]);
-  }
-  const entries = Object.entries(iter);
-  entries.sort(([a], [b]) => a.localeCompare(b));
-  return entries.map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v]);
+  return getEntries(iter).sort(([a], [b]) => a.localeCompare(b));
 };
 
 /**
@@ -192,3 +193,25 @@ export function getSortedEntries(iter: Record<string, string | string[]> | FormD
 export function toHashString(object: PlainObject): string {
   return createHash('md5').update(JSON.stringify(object), 'binary').digest('hex');
 }
+
+/**
+ * Create snapshot name from request.
+ */
+async function createSnapshotPath(info: Info & { context: typeof context }, config: SnapshotConfig) {
+  if (config.createSnapshotPath) {
+    return await config.createSnapshotPath(info);
+  }
+
+  const url = new URL(info.request.url);
+  return [
+    context.namespace,
+    info.request.method,
+    url.origin,
+    url.pathname,
+  ].join('/') + '/' + toHashString([
+    getSortedEntries(url.searchParams),
+    getSortedEntries(info.request.headers),
+    getSortedEntries(info.cookies),
+    new TextDecoder('utf-8').decode(await info.request.arrayBuffer()),
+  ]);
+};

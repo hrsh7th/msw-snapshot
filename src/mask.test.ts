@@ -1,24 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { maskBody } from "./index.js";
+import { getEntries, maskBody } from "./index.js";
 import { maskJSON, maskHeaders, maskFormData, maskURLSearchParams } from "./mask.js";
 
 describe('msw-snapshot', () => {
 
   it('should mask body fields', () => {
-    expect(maskBody(JSON.stringify({
-      name: 'name',
-      mask: Date.now(),
-      nest: {
+    expect(
+      maskBody(JSON.stringify({
+        name: 'name',
         mask: Date.now(),
+        nest: {
+          mask: Date.now(),
+        }
+      }), ['mask'])
+    ).toBe(JSON.stringify({
+      name: 'name',
+      mask: '*****',
+      nest: {
+        mask: '*****'
       }
-    }), ['mask'])).toBe(JSON.stringify({ name: 'name', nest: {} }))
+    }))
   });
 
   it('should mask the json fields', () => {
     expect(
       maskJSON(
         {
-          name: 'name',
+          name: 'John',
           mask: Date.now(),
           nest: {
             mask: Date.now()
@@ -26,41 +34,44 @@ describe('msw-snapshot', () => {
         },
         ['mask']
       )
-    ).toStrictEqual({ name: 'name', nest: {} })
+    ).toStrictEqual({
+      name: 'John',
+      mask: '*****',
+      nest: {
+        mask: '*****'
+      }
+    })
     expect(maskJSON(1, [])).toStrictEqual(1)
   });
 
   it('should mask the Headers fields', () => {
     const headers = new Headers();
-    headers.append('name', 'name');
-    headers.append('mask', Date.now().toString());
-    const keys: string[] = [];
-    maskHeaders(headers, ['mask']).forEach((_, key) => {
-      keys.push(key);
-    });
-    expect(keys).toStrictEqual(['name']);
+    headers.set('name', 'John');
+    headers.set('mask', Date.now().toString());
+    expect(getEntries(maskHeaders(headers, ['mask']))).toStrictEqual([
+      ['mask', '*****'],
+      ['name', 'John'],
+    ]);
   });
 
   it('should mask the URLSearchParams fields', () => {
     const params = new URLSearchParams();
-    params.append('name', 'name');
+    params.append('name', 'John');
     params.append('mask', Date.now().toString());
-    const keys: string[] = [];
-    maskURLSearchParams(params, ['mask']).forEach((_, key) => {
-      keys.push(key);
-    });
-    expect(keys).toStrictEqual(['name']);
+    expect(getEntries(maskURLSearchParams(params, ['mask']))).toStrictEqual([
+      ['name', 'John'],
+      ['mask', '*****']
+    ]);
   });
 
   it('should mask the FormData fields', () => {
     const formData = new FormData();
-    formData.append('name', 'name');
+    formData.append('name', 'John');
     formData.append('mask', Date.now().toString());
-    const keys: string[] = [];
-    maskFormData(formData, ['mask']).forEach((_, key) => {
-      keys.push(key);
-    });
-    expect(keys).toStrictEqual(['name']);
+    expect(getEntries(maskFormData(formData, ['mask']))).toStrictEqual([
+      ['name', 'John'],
+      ['mask', '*****']
+    ]);
   });
 
 });
