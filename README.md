@@ -78,11 +78,72 @@ Recipe
 FAQ
 ------------------------------------------------------------
 
-### How should I use `createSnapshotFilename`?
+### How should I use `createSnapshotPath`?
+
+You can control the snapshot directory layout via this.
+
+For example, if you want to create snapshot files that should be located per request host and pathname, you can use the following configuration.
+
+```
+snapshot({
+
+  ...
+
+  createSnapshotPath: async (info) => {
+    const url = new URL(info.request.url);
+    return [
+      url.host,
+      url.pathname,
+      toHashString([
+        info.request.method,
+        url.origin,
+        url.pathname,
+        getSortedEntries(maskURLSearchParams(url.searchParams, ['t'])), // this
+        getSortedEntries(info.request.headers),
+        getSortedEntries(info.cookies),
+        new TextDecoder('utf-8').decode(await info.request.arrayBuffer()),
+      ])
+    ].join('/');
+  },
+
+  ...
+
+})
+```
+
+For another use-case, if you want to create snapshot files for each vitest/jest test-cases, you probably use the following configuration.
+
+```
+import { context, snapshot } from 'msw-snapshot';
+import { beforeEach } from 'vitest';
+
+beforeEach(ctx => {
+  context.namespace = ctx.expect.getState().currentTestName;
+})
+
+const fetchCountMap = {};
+
+snapshot({
+
+  ...
+
+  createSnapshotPath: async (info) => {
+    fetchCountMap[info.context.namespace] = fetchCountMap[info.context.namespace] ?? 0;
+    fetchCountMap[info.context.namespace]++;
+    return `${info.context.namespace}-${String(fetchCountMap[info.context.namespace]).padStart(3, '0')}`
+  },
+
+  ...
+
+})
+```
+
+
+### How should I use `mask***` functions?
 
 For example, if your app appends cache busting query like `t=${Date.now()}`, `msw-snapshot` will take unexpected snapshots.
 
-In this case, You can control snapshot identity via `createSnapshotFilename`.
+In this case, You can control snapshot identity via `createSnapshotPath`.
 
 ```ts
 import { snapshot, toHashString, maskURLSearchParams } from 'msw-snapshot';
@@ -91,27 +152,25 @@ snapshot({
 
   ...
 
-  createSnapshotFilename: async (req) => {
-    return toHashString([
-      req.method,
-      req.url.origin,
-      req.url.pathname,
-      getSortedEntries(maskURLSearchParams(req.url.searchParams, ['t'])), // this
-      getSortedEntries(req.headers),
-      getSortedEntries(req.cookies),
-      await req.text(),
-    ]);
+  createSnapshotPath: async (info) => {
+    const url = new URL(info.request.url);
+    return [
+      url.host,
+      url.pathname,
+      toHashString([
+        info.request.method,
+        url.origin,
+        url.pathname,
+        getSortedEntries(maskURLSearchParams(url.searchParams, ['t'])), // this
+        getSortedEntries(info.request.headers),
+        getSortedEntries(info.cookies),
+        new TextDecoder('utf-8').decode(await info.request.arrayBuffer()),
+      ])
+    ].join('/');
   },
 
   ...
 
 })
 ```
-
-### Does this supports `FormData`?
-
-No. This module does not support `FormData` due to `msw` limitation.
-
-Please wait `msw@next`.
-
 
