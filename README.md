@@ -19,12 +19,18 @@ Configuration
 import { setupServer } from 'msw/node';
 import { snapshot } from 'snapshot'
 
+type Info = {
+  request: Request;
+  cookies: Record<string, string | string[]>;
+  context: { namespace: string };
+}
+
 const server = setupServer(
   snapshot({
     /**
      * Specify the directory path to store snapshot files.
      */
-    snapshotPath: string;
+    basePath: string;
 
     /**
      * Specify msw's handler RegExp.
@@ -34,7 +40,7 @@ const server = setupServer(
     /**
      * Specify whether to update snapshot or not.
      */
-    updateSnapshots?: boolean; // default: false
+    updateSnapshots?: boolean | 'none' | 'all' | 'missing'; // default: false
 
     /**
      * Specify whether to ignore existing snapshot or not.
@@ -44,22 +50,22 @@ const server = setupServer(
     /**
      * Callback when response is received from server.
      */
-    onFetchFromServer?: (req: MockedRequest, snapshot: Snapshot) => void;
+    onFetchFromServer?: (info: Info, snapshot: Snapshot) => void;
 
     /**
      * Callback when response is received from snapshot.
      */
-    onFetchFromSnapshot?: (req: MockedRequest, snapshot: Snapshot) => void;
+    onFetchFromSnapshot?: (info: Info, snapshot: Snapshot) => void;
 
     /**
      * Callback when snapshot is updated.
      */
-    onSnapshotUpdated?: (req: MockedRequest, snapshot: Snapshot) => void;
+    onSnapshotUpdated?: (info: Info, snapshot: Snapshot) => void;
 
     /**
      * Create request identifier.
      */
-    createSnapshotFilename?: (req: MockedRequest) => Promise<string>;
+    createSnapshotPath?: (info: Info) => Promise<string>;
   })
 );
 

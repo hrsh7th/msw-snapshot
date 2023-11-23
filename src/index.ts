@@ -1,6 +1,6 @@
 import { TextDecoder } from 'node:util';
 import { DefaultBodyType, http, HttpHandler, StrictRequest } from "msw";
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
@@ -31,13 +31,15 @@ export type SnapshotConfig = {
 
   /**
    * Specify whether to update snapshots.
-   * - true
+   * - true (all)
    *   - update snapshot
-   * - false
+   * - missing
+   *   - update snapshot if snapshot is missing
+   * - false (none)
    *   - don't update snapshot
    * @default false
    */
-  updateSnapshots?: boolean;
+  updateSnapshots?: boolean | 'none' | 'all' | 'missing';
 
   /**
    * Specify whether to ignore snapshots.
@@ -111,7 +113,7 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
         context: context,
       };
     }
-    const snapshotPath = config.basePath + '/' + await createSnapshotPath(clonedInfo(), config);
+    const snapshotPath = join(config.basePath, await createSnapshotPath(clonedInfo(), config));
 
     // Fetch from snapshot
     if (!config.ignoreSnapshots && existsSync(snapshotPath)) {
@@ -148,7 +150,11 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
     config.onFetchFromServer?.(clonedInfo(), snapshot);
 
     // Update snapshot if needed
-    if (config.updateSnapshots) {
+    let shouldUpdateSnapshots = false
+    shouldUpdateSnapshots = shouldUpdateSnapshots || config.updateSnapshots === true;
+    shouldUpdateSnapshots = shouldUpdateSnapshots || config.updateSnapshots === 'all';
+    shouldUpdateSnapshots = shouldUpdateSnapshots || config.updateSnapshots === 'missing' && !existsSync(snapshotPath);
+    if (shouldUpdateSnapshots) {
       mkdirSync(dirname(snapshotPath), { recursive: true });
       writeFileSync(snapshotPath, JSON.stringify(snapshot, undefined, 2));
       config.onSnapshotUpdated?.(clonedInfo(), snapshot);
