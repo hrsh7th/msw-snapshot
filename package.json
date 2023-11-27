@@ -54,12 +54,12 @@
     "@fastify/cookie": "^9.2.0",
     "@fastify/formbody": "^7.4.0",
     "@fastify/multipart": "^8.0.0",
-    "@types/node": "^20.9.4",
+    "@types/node": "^20.10.0",
     "fastify": "^4.24.3",
-    "msw": "^2.0.8",
+    "msw": "^2.0.9",
     "start-server-and-test": "^2.0.3",
-    "tsx": "^4.4.0",
-    "typescript": "^5.3.2",
+    "tsx": "^4.5.0",
+    "typescript": "^5.2",
     "vitest": "^0.34.6"
   }
 }

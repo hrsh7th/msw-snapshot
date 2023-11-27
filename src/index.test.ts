@@ -69,7 +69,92 @@ describe('msw-snapshot', () => {
     ])
   })
 
-  it.only('should add namespace to snapshot filename', async () => {
+  it.each([
+    {
+      same: false,
+      one: { headers: { 'X-Test': '1', } },
+      two: { headers: { 'X-Test': '2', } }
+    },
+    {
+      same: true,
+      one: { headers: { 'X-Test': '1', } },
+      two: { headers: { 'X-Test': '1', } }
+    },
+    {
+      same: false,
+      one: { headers: new Headers({ 'X-Test': '1', }) },
+      two: { headers: new Headers({ 'X-Test': '2', }) }
+    },
+    {
+      same: true,
+      one: { headers: new Headers({ 'X-Test': '1', }) },
+      two: { headers: new Headers({ 'X-Test': '1', }) }
+    },
+    {
+      same: false,
+      one: { body: JSON.stringify({ test: '1', }) },
+      two: { body: JSON.stringify({ test: '2', }) }
+    },
+    {
+      same: true,
+      one: { body: JSON.stringify({ test: '1', }) },
+      two: { body: JSON.stringify({ test: '1', }) }
+    },
+    {
+      same: false,
+      one: { body: new URLSearchParams({ test: '1', }) },
+      two: { body: new URLSearchParams({ test: '2', }) }
+    },
+    {
+      same: true,
+      one: { body: new URLSearchParams({ test: '1', }) },
+      two: { body: new URLSearchParams({ test: '1', }) }
+    }
+  ])('should create different snapshot', async (spec) => {
+    const events: string[] = [];
+    const server = setupServer(
+      snapshot({
+        basePath: SNAPSHOT_PATH,
+        updateSnapshots: true,
+        ignoreSnapshots: false,
+        onFetchFromServer: () => {
+          events.push('server');
+        },
+        onFetchFromSnapshot: () => {
+          events.push('cache');
+        },
+        onSnapshotUpdated: () => {
+          events.push('updated');
+        },
+      })
+    );
+    try {
+      server.listen();
+      await fetch('http://127.0.0.1:3000/data', {
+        method: 'body' in spec.one ? 'POST' : 'GET',
+        ...spec.one,
+      });
+      await fetch('http://127.0.0.1:3000/data', {
+        method: 'body' in spec.two ? 'POST' : 'GET',
+        ...spec.two,
+      });
+      expect(events).toMatchObject(!spec.same ? [
+        'server',
+        'updated',
+        'server',
+        'updated'
+      ] : [
+        'server',
+        'updated',
+        'cache',
+      ]);
+    } finally {
+      server.close();
+    }
+
+  })
+
+  it('should add namespace to snapshot filename', async () => {
     const events: [string, string][] = [];
     const server = setupServer(
       snapshot({
