@@ -212,7 +212,9 @@ async function createSnapshotPath(info: Info & { context: typeof context }, conf
   return [
     context.namespace,
     info.request.method,
-    url.origin,
+    url.protocol.replace(/:/g, ''),
+    url.hostname,
+    url.port || 'default-port',
     url.pathname,
   ].join('/') + '/' + toHashString([
     getSortedEntries(url.searchParams),
