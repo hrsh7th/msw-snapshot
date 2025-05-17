@@ -120,8 +120,13 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
       try {
         const snapshot = JSON.parse(readFileSync(snapshotPath).toString('utf8')) as Snapshot;
         config.onFetchFromSnapshot?.(clonedInfo(), snapshot);
+        const filteredHeaders = snapshot.response.headers.filter(
+          ([key, _]) =>
+          !key.toLowerCase().includes('content-encoding') &&
+          !key.toLowerCase().includes('transfer-encoding')
+        );
         return new Response(new TextEncoder().encode(snapshot.response.body), {
-          headers: new Headers(snapshot.response.headers),
+          headers: new Headers(filteredHeaders),
           status: snapshot.response.status,
           statusText: snapshot.response.statusText,
         });
@@ -160,8 +165,15 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
       config.onSnapshotUpdated?.(clonedInfo(), snapshot);
     }
 
+    // Filter out compression-related headers since we're manually handling the body
+    const filteredHeaders = snapshot.response.headers.filter(
+      ([key, _]) =>
+      !key.toLowerCase().includes('content-encoding') &&
+      !key.toLowerCase().includes('transfer-encoding')
+    );
+
     return new Response(new TextEncoder().encode(snapshot.response.body), {
-      headers: new Headers(snapshot.response.headers),
+      headers: new Headers(filteredHeaders),
       status: snapshot.response.status,
       statusText: snapshot.response.statusText,
     });
