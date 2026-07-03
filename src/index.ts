@@ -1,5 +1,5 @@
 import { TextDecoder } from 'node:util';
-import { DefaultBodyType, http, HttpHandler, StrictRequest } from "msw";
+import { DefaultBodyType, http, HttpHandler, StrictRequest, bypass } from "msw";
 import { dirname, join } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -136,7 +136,7 @@ export const snapshot = (config: SnapshotConfig): HttpHandler => {
     }
 
     // Fetch from server
-    const response = await pureFetch(mswInfo.request.clone());
+    const response = await pureFetch(bypass(mswInfo.request.clone()));
     const snapshot: Snapshot = {
       request: {
         method: mswInfo.request.method,
